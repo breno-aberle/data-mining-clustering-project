@@ -3,18 +3,19 @@ import numpy as np
 import matplotlib.pyplot as plt
 from sklearn.decomposition import PCA
 from sklearn.cluster import KMeans
+import scipy.cluster.hierarchy as sch
 
 
 def zscore(x, mean, std):
     score = (x - mean) / std
     return score
 
-def min_max_scaling():
-    return
+def min_max_scaling(x, min, max):
+    return (x - min) / (max - min)
 
-def mean_normalization():
-    return 
-
+def mean_normalization(x, mean, min, max):
+    return (x - mean) / (max - min)
+ 
 
 # Returns dict
 def metrics(data, idx_cols=0):
@@ -33,14 +34,20 @@ def metrics(data, idx_cols=0):
     return df_metrics
 
 # Returns df
-def standardize(data, df_metrics, idx_cols=0):
+def standardize(data, df_metrics, transform, idx_cols=0):
     # Apply standardization on genedata dataset
     # zscore
 
     data_std = pd.DataFrame()
 
     for col in data.columns[idx_cols:]:
-        values_std = zscore(data[col].values, df_metrics.loc[col]['mean'], df_metrics.loc[col]['std'])
+        values_std = []
+        if transform == 'zscore':
+            values_std = zscore(data[col].values, df_metrics.loc[col]['mean'], df_metrics.loc[col]['std'])
+        elif transform == 'minmax':
+            values_std = min_max_scaling(data[col].values, df_metrics.loc[col]['min'], df_metrics.loc[col]['max'])
+        elif transform == 'mean':
+            values_std = mean_normalization(data[col].values, df_metrics.loc[col]['mean'], df_metrics.loc[col]['min'], df_metrics.loc[col]['max'])
         data_std[col] = values_std
     
     return data_std
@@ -51,13 +58,13 @@ def dim_reduce(data, pct=0.99):
     return pd.DataFrame(pca.transform(data))
 
 # Returns df
-def preprocess(data, idx_cols=0, std_pca=False):
+def preprocess(data, scaling='zscore', idx_cols=0, std_pca=False):
     
     metrics_dict = metrics(data, idx_cols)
-    data_std = standardize(data, metrics_dict, idx_cols)
+    data_std = standardize(data, metrics_dict, scaling, idx_cols)
     data_reduced = dim_reduce(data_std)
     pca_metrics_dict = metrics(data_reduced)
-    pca_std = standardize(data_reduced, pca_metrics_dict)
+    pca_std = standardize(data_reduced, pca_metrics_dict, scaling)
     if std_pca:
         return pca_std
     else:
@@ -79,10 +86,15 @@ def kmeans(data, k):
     return preds, km
 
 def nmi(truth, preds, c, d=5):
+    """
+    Params:
+        c: number of clusters
+        d: number of classifications
+    """
     # preds = c
     # truth = d
     n = len(truth)
-    
+
     pcd = np.zeros((c, d)) # cluster x classification
     pc = np.zeros(c)
     pd = np.zeros(d)
@@ -114,3 +126,25 @@ def nmi(truth, preds, c, d=5):
     return mi / den
 
     
+def agglo_func(data, linkages, linkages_func, n_cluster, dataset, storage, true_labels, plot=False): 
+    
+
+    for (link, func) in zip(linkages, linkages_func):
+        Z = func(data)
+        pred_labels = sch.fcluster(Z, n_cluster, criterion='maxclust') - 1
+
+        nmi_score = nmi(true_labels, pred_labels, n_cluster)
+
+        storage[dataset][link].append(nmi_score)
+
+        
+        # print(f'Scores with {link}-linkage')
+        # print(f'NMI score: {nmi_score}')
+
+
+
+    if plot:
+        dendrogram = sch.dendrogram(sch.linkage(imputed_data, method=link))
+        plt.show()
+
+    # return pred_labels
