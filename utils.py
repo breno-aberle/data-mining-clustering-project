@@ -5,6 +5,7 @@ from sklearn.decomposition import PCA
 from sklearn.cluster import KMeans
 import scipy.cluster.hierarchy as sch
 from sklearn.metrics.cluster import normalized_mutual_info_score
+import umap
 
 def zscore(x, mean, std):
     score = (x - mean) / std
@@ -52,24 +53,32 @@ def standardize(data, df_metrics, transform, idx_cols=0):
     
     return data_std
 
-def dim_reduce(data, pct=0.99):
-    pca = PCA(n_components=pct)
-    pca.fit(data)
-    return pd.DataFrame(pca.transform(data))
+def dim_reduce(data, reduce_method, pct=0.99):
+    if reduce_method == 'pca':
+        pca = PCA(n_components=pct)
+        pca.fit(data)
+        return pd.DataFrame(pca.transform(data))
+
+    elif reduce_method == 'umap':
+        reducer = umap.UMAP()
+        reduced_data = reducer.fit_transform(data)
+        return pd.DataFrame(reduced_data)
+
+    else:
+        raise AssertionError('Invalid reduce method')
 
 # Returns df
-def preprocess(data, scaling='zscore', idx_cols=0, std_pca=False):
+def preprocess(data, scaling='zscore', reduce_method='pca', idx_cols=0, std_pca=False):
     
     metrics_dict = metrics(data, idx_cols)
     data_std = standardize(data, metrics_dict, scaling, idx_cols)
-    data_reduced = dim_reduce(data_std)
+    data_reduced = dim_reduce(data_std, reduce_method)
     pca_metrics_dict = metrics(data_reduced)
     pca_std = standardize(data_reduced, pca_metrics_dict, scaling)
     if std_pca:
         return pca_std
     else:
         return data_reduced
-
 
 def plot_hist(data, bins=30, cols=3):
     keys = data.columns.values
@@ -133,7 +142,8 @@ def agglo_func(data, linkages, linkages_func, n_cluster, dataset, storage, true_
     
 
     for (link, func) in zip(linkages, linkages_func):
-        Z = func(data)
+        # Z = func(data)
+        Z = sch.linkage(data, method=link, metric='mahalanobis') # euclidean, cosine, mahalanobis, 
         pred_labels = sch.fcluster(Z, n_cluster, criterion='maxclust') - 1
 
         nmi_score = nmi(true_labels, pred_labels, n_cluster)
