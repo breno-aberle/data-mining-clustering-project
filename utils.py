@@ -2,7 +2,7 @@ import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 from sklearn.decomposition import PCA
-from sklearn.cluster import KMeans
+from sklearn.cluster import KMeans, DBSCAN
 import scipy.cluster.hierarchy as sch
 from sklearn.metrics.cluster import normalized_mutual_info_score
 import umap
@@ -94,6 +94,10 @@ def kmeans(data, k):
     preds = km.fit_predict(data)
     return preds, km
 
+def dbscan(data):
+    dbscan = DBSCAN().fit(data)
+    return dbscan.labels_, dbscan
+
 def nmi(truth, preds, c, d=5, library=True):
     """
     Params:
@@ -143,7 +147,7 @@ def agglo_func(data, linkages, linkages_func, n_cluster, dataset, storage, true_
 
     for (link, func) in zip(linkages, linkages_func):
         # Z = func(data)
-        Z = sch.linkage(data, method=link, metric='mahalanobis') # euclidean, cosine, mahalanobis, 
+        Z = sch.linkage(data, method=link, metric='cosine') # euclidean, cosine, mahalanobis, 
         pred_labels = sch.fcluster(Z, n_cluster, criterion='maxclust') - 1
 
         nmi_score = nmi(true_labels, pred_labels, n_cluster)
