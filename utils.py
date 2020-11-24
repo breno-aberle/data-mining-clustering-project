@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 from sklearn.decomposition import PCA
 from sklearn.cluster import KMeans
 import scipy.cluster.hierarchy as sch
-
+from sklearn.metrics.cluster import normalized_mutual_info_score
 
 def zscore(x, mean, std):
     score = (x - mean) / std
@@ -85,12 +85,15 @@ def kmeans(data, k):
     preds = km.fit_predict(data)
     return preds, km
 
-def nmi(truth, preds, c, d=5):
+def nmi(truth, preds, c, d=5, library=True):
     """
     Params:
         c: number of clusters
         d: number of classifications
     """
+
+    if library:
+        return normalized_mutual_info_score(truth, preds, average_method='geometric')
     # preds = c
     # truth = d
     n = len(truth)
