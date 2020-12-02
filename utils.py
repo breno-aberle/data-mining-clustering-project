@@ -2,7 +2,7 @@ import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 from sklearn.decomposition import PCA
-from sklearn.cluster import KMeans, DBSCAN
+from sklearn.cluster import KMeans, DBSCAN, SpectralClustering
 import scipy.cluster.hierarchy as sch
 from sklearn.metrics.cluster import normalized_mutual_info_score
 import umap
@@ -68,11 +68,11 @@ def dim_reduce(data, reduce_method, pct=0.99):
         raise AssertionError('Invalid reduce method')
 
 # Returns df
-def preprocess(data, scaling='zscore', reduce_method='pca', idx_cols=0, std_pca=False):
+def preprocess(data, scaling='zscore', reduce_method='pca', idx_cols=0, std_pca=False, pca_pct=0.99):
     
     metrics_dict = metrics(data, idx_cols)
     data_std = standardize(data, metrics_dict, scaling, idx_cols)
-    data_reduced = dim_reduce(data_std, reduce_method)
+    data_reduced = dim_reduce(data_std, reduce_method, pca_pct)
     pca_metrics_dict = metrics(data_reduced)
     pca_std = standardize(data_reduced, pca_metrics_dict, scaling)
     if std_pca:
@@ -97,6 +97,10 @@ def kmeans(data, k):
 def dbscan(data):
     dbscan = DBSCAN().fit(data)
     return dbscan.labels_, dbscan
+
+def spectral(data, k):
+    spec = SpectralClustering(n_clusters=k).fit(data)
+    return spec.labels_, spec
 
 def nmi(truth, preds, c, d=5, library=True):
     """
