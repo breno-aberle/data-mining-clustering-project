@@ -149,6 +149,7 @@ def nmi(truth, preds, c, d=5, library=True):
 def agglo_func(data, linkages, linkages_func, n_cluster, dataset, storage, true_labels, plot=False): 
     
 
+    res = []
     for (link, func) in zip(linkages, linkages_func):
         # Z = func(data)
         Z = sch.linkage(data, method=link, metric='cosine') # euclidean, cosine, mahalanobis, 
@@ -158,7 +159,9 @@ def agglo_func(data, linkages, linkages_func, n_cluster, dataset, storage, true_
 
         storage[dataset][link].append(nmi_score)
 
-        
+        res.append((nmi_score, pred_labels))
+
+    return res
         # print(f'Scores with {link}-linkage')
         # print(f'NMI score: {nmi_score}')
 
